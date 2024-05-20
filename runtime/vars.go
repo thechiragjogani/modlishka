@@ -2,7 +2,7 @@ package runtime
 
 import (
 	"encoding/base64"
-	"github.com/drk1wi/Modlishka/config"
+	"github.com/thechiragjogani/modlishka/config"
 	"golang.org/x/net/publicsuffix"
 	"log"
 	"regexp"
@@ -103,4 +103,3 @@ func SetCoreRuntimeConfig(conf config.Options) {
 	ForceHTTPS = *conf.ForceHTTPS
 	ForceHTTP = *conf.ForceHTTP
 }
-

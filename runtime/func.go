@@ -2,7 +2,7 @@ package runtime
 
 import (
 	"fmt"
-	"github.com/drk1wi/Modlishka/log"
+	"github.com/thechiragjogani/modlishka/log"
 	"github.com/miekg/dns"
 	"net/url"
 	"regexp"
@@ -211,4 +211,3 @@ func GetJSRulesPayload(input string) string {
 
 	return ""
 }
-
