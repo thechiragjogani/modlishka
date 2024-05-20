@@ -171,7 +171,7 @@ func (c *Options) parseJSON(file string) {
 func (c *Options) VerifyConfiguration() {
 
 	if *c.ForceHTTP == true {
-		if len(*c.ProxyDomain) == 0 || len(*c.ProxyDomain) == 0 {
+		if len(*c.ProxyDomain) == 0 || len(*c.Target) == 0 {
 			log.Warningf("Missing required parameters in oder start the proxy. Terminating.")
 			log.Warningf("TIP: You will need to specify at least the following parameters to serve the page over HTTP: proxyDomain and target.")
 			flag.PrintDefaults()
@@ -179,7 +179,7 @@ func (c *Options) VerifyConfiguration() {
 		}
 	} else { 	// default + HTTPS wrapper
 
-			if len(*c.ProxyDomain) == 0 || len(*c.ProxyDomain) == 0 {
+			if len(*c.ProxyDomain) == 0 || len(*c.Target) == 0 {
 				log.Warningf("Missing required parameters in oder start the proxy. Terminating.")
 				log.Warningf("TIP: You will need to specify at least the following parameters to serve the page over HTTP: proxyDomain and target.")
 				flag.PrintDefaults()

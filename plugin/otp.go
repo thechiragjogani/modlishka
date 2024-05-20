@@ -47,7 +47,7 @@ type RequestCredentials struct {
 var htmltemplate = `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Modlishka Control Panel v.0.1 (beta)</title>
+  <title>Modlishka Control Panel v0.1</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
@@ -824,14 +824,14 @@ func basicAuth(h http.HandlerFunc) http.HandlerFunc {
 
 func init() {
 	s := Property{}
-	s.Name = "control_panel"
-	s.Description = "This is a web control panel for your phishing engagements."
+	s.Name = "otp"
+	s.Description = "This is a web control panel with otp for your phishing engagements."
 	s.Version = "0.1"
 
 	//init all of the vars, print a welcome message, init your command line flags here
 	s.Init = func() {
 		//init database
-		db, err := buntdb.Open("control_plugin_data.db")
+		db, err := buntdb.Open("control_plugin_otp_data.db")
 		if err != nil {
 			log.Fatal(err)
 		}
