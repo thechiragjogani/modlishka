@@ -15,12 +15,12 @@
 package plugin
 
 import (
-	"github.com/thechiragjogani/modlishka/config"
+	"github.com/drk1wi/Modlishka/config"
 	"net/http"
 	"net/url"
 	"strings"
 
-	"github.com/thechiragjogani/modlishka/log"
+	"github.com/drk1wi/Modlishka/log"
 )
 
 var (

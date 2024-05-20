@@ -16,8 +16,8 @@ package plugin
 
 import (
 	"encoding/json"
-	"github.com/thechiragjogani/modlishka/config"
-	"github.com/thechiragjogani/modlishka/log"
+	"github.com/drk1wi/Modlishka/config"
+	"github.com/drk1wi/Modlishka/log"
 	"io"
 	"net/http"
 	"os"

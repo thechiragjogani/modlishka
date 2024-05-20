@@ -58,3 +58,5 @@ windows_xgo:
 
 freebsd_xgo:
 	xgo --targets=freebsd/amd64  --dest $(DIST_DIR)/ ./
+
+

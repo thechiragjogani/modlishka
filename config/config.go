@@ -18,7 +18,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"flag"
-	"github.com/thechiragjogani/modlishka/log"
+	"github.com/drk1wi/Modlishka/log"
 	"io"
 	"os"
 )
