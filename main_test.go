@@ -15,17 +15,17 @@
 package main
 
 import (
-	"github.com/drk1wi/Modlishka/config"
-	"github.com/drk1wi/Modlishka/log"
-	"github.com/drk1wi/Modlishka/plugin"
-	"github.com/drk1wi/Modlishka/runtime"
+	"github.com/thechiragjogani/modlishka/config"
+	"github.com/thechiragjogani/modlishka/log"
+	"github.com/thechiragjogani/modlishka/plugin"
+	"github.com/thechiragjogani/modlishka/runtime"
 	"math/rand"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
 
-	"github.com/drk1wi/Modlishka/core"
+	"github.com/thechiragjogani/modlishka/core"
 
 	"golang.org/x/net/publicsuffix"
 )
