@@ -1,4 +1,4 @@
-module github.com/drk1wi/Modlishka
+module github.com/thechiragjogani/modlishka
 
 go 1.21
 
